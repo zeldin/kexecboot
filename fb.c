@@ -87,6 +87,16 @@ fb_plot_pixel_32bpp(FB * fb, int x, int y, kx_ccomp red, kx_ccomp green, kx_ccom
 	offset = fb->backbuffer + ((oy * fb->real_width + ox) << 2);
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
+#ifdef __BIG_ENDIAN__
+	if (RGB == fb->rgbmode) {
+		*(offset + 1) = red;
+		*(offset + 3) = blue;
+	} else {
+		*(offset + 1) = red;
+		*(offset + 3) = blue;
+	}
+	*(offset + 2) = green;
+#else
 	if (RGB == fb->rgbmode) {
 		*(offset) = blue;
 		*(offset + 2) = red;
@@ -95,6 +105,7 @@ fb_plot_pixel_32bpp(FB * fb, int x, int y, kx_ccomp red, kx_ccomp green, kx_ccom
 		*(offset + 2) = blue;
 	}
 	*(offset + 1) = green;
+#endif
 }
 #endif
 
@@ -110,6 +121,16 @@ fb_plot_pixel_24bpp(FB * fb, int x, int y, kx_ccomp red, kx_ccomp green, kx_ccom
 	offset = fb->backbuffer + (r + (r << 1));
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
+#ifdef __BIG_ENDIAN__
+	if (RGB == fb->rgbmode) {
+		*(offset) = red;
+		*(offset + 2) = blue;
+	} else {
+		*(offset) = blue;
+		*(offset + 2) = red;
+	}
+	*(offset + 1) = green;
+#else
 	if (RGB == fb->rgbmode) {
 		*(offset) = blue;
 		*(offset + 2) = red;
@@ -118,6 +139,7 @@ fb_plot_pixel_24bpp(FB * fb, int x, int y, kx_ccomp red, kx_ccomp green, kx_ccom
 		*(offset + 2) = blue;
 	}
 	*(offset + 1) = green;
+#endif
 }
 #endif
 
@@ -133,6 +155,17 @@ fb_plot_pixel_18bpp(FB * fb, int x, int y, kx_ccomp red, kx_ccomp green, kx_ccom
 	offset = fb->backbuffer + (r + (r << 1));
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
+#ifdef __BIG_ENDIAN__
+	if (RGB == fb->rgbmode) {
+			*(offset++) = (red & 0xC0) >> 6;
+			*(offset++) = ((green & 0xF0) >> 4) | ((red & 0x3C) << 2);
+			*(offset++)     = (blue >> 2) | ((green & 0x0C) << 4);
+	} else {
+			*(offset++) = (blue & 0xC0) >> 6;
+			*(offset++) = ((green & 0xF0) >> 4) | ((blue & 0x3C) << 2);
+			*(offset++)     = (red >> 2) | ((green & 0x0C) << 4);
+	}
+#else
 	if (RGB == fb->rgbmode) {
 			*(offset++)     = (blue >> 2) | ((green & 0x0C) << 4);
 			*(offset++) = ((green & 0xF0) >> 4) | ((red & 0x3C) << 2);
@@ -142,6 +175,7 @@ fb_plot_pixel_18bpp(FB * fb, int x, int y, kx_ccomp red, kx_ccomp green, kx_ccom
 			*(offset++) = ((green & 0xF0) >> 4) | ((blue & 0x3C) << 2);
 			*(offset++) = (blue & 0xC0) >> 6;
 	}
+#endif
 }
 #endif
 
@@ -274,6 +308,15 @@ fb_draw_hline_24bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp gre
 	offset = fb->backbuffer + (r + (r << 1));
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
+#ifdef __BIG_ENDIAN__
+	if (RGB == fb->rgbmode) {
+		c1 = red;
+		c3 = blue;
+	} else {
+		c1 = blue;
+		c3 = red;
+	}
+#else
 	if (RGB == fb->rgbmode) {
 		c1 = blue;
 		c3 = red;
@@ -281,6 +324,7 @@ fb_draw_hline_24bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp gre
 		c1 = red;
 		c3 = blue;
 	}
+#endif
 
 	if (length > fb->width - x)
 		oy = fb->width - x;
@@ -309,6 +353,17 @@ fb_draw_hline_18bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp gre
 	offset = fb->backbuffer + (r + (r << 1));
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
+#ifdef __BIG_ENDIAN__
+	if (RGB == fb->rgbmode) {
+		c1 = (red >> 2) | ((green & 0x0C) << 4);
+		c2 = ((green & 0xF0) >> 4) | ((blue & 0x3C) << 2);
+		c3 = (blue & 0xC0) >> 6;
+	} else {
+		c1 = (blue >> 2) | ((green & 0x0C) << 4);
+		c2 = ((green & 0xF0) >> 4) | ((red & 0x3C) << 2);
+		c3 = (red & 0xC0) >> 6;
+	}
+#else
 	if (RGB == fb->rgbmode) {
 		c1 = (blue >> 2) | ((green & 0x0C) << 4);
 		c2 = ((green & 0xF0) >> 4) | ((red & 0x3C) << 2);
@@ -318,6 +373,7 @@ fb_draw_hline_18bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp gre
 		c2 = ((green & 0xF0) >> 4) | ((blue & 0x3C) << 2);
 		c3 = (blue & 0xC0) >> 6;
 	}
+#endif
 
 	if (length > fb->width - x)
 		oy = fb->width - x;
