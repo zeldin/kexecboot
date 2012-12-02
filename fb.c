@@ -84,7 +84,7 @@ fb_plot_pixel_32bpp(FB * fb, int x, int y, kx_ccomp red, kx_ccomp green, kx_ccom
 	static int ox, oy;
 
 	fb_respect_angle(fb, x, y, &ox, &oy, NULL);
-	offset = fb->backbuffer + ((oy * fb->real_width + ox) << 2);
+	offset = fb->backbuffer + oy * fb->stride + (ox << 2);
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
 #ifdef __BIG_ENDIAN__
@@ -114,11 +114,10 @@ static void
 fb_plot_pixel_24bpp(FB * fb, int x, int y, kx_ccomp red, kx_ccomp green, kx_ccomp blue)
 {
 	static char *offset;
-	static int ox, oy, r;
+	static int ox, oy;
 
 	fb_respect_angle(fb, x, y, &ox, &oy, NULL);
-	r = oy * fb->real_width + ox;
-	offset = fb->backbuffer + (r + (r << 1));
+	offset = fb->backbuffer + oy * fb->stride + (ox + (ox << 1));
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
 #ifdef __BIG_ENDIAN__
@@ -148,11 +147,10 @@ static void
 fb_plot_pixel_18bpp(FB * fb, int x, int y, kx_ccomp red, kx_ccomp green, kx_ccomp blue)
 {
 	static char *offset;
-	static int ox, oy, r;
+	static int ox, oy;
 
 	fb_respect_angle(fb, x, y, &ox, &oy, NULL);
-	r = oy * fb->real_width + ox;
-	offset = fb->backbuffer + (r + (r << 1));
+	offset = fb->backbuffer + oy * fb->stride + (ox + (ox << 1));
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
 #ifdef __BIG_ENDIAN__
@@ -187,7 +185,7 @@ fb_plot_pixel_16bpp(FB * fb, int x, int y, kx_ccomp red, kx_ccomp green, kx_ccom
 	static int ox, oy;
 
 	fb_respect_angle(fb, x, y, &ox, &oy, NULL);
-	offset = fb->backbuffer + ((oy * fb->real_width + ox) << 1);
+	offset = fb->backbuffer + oy * fb->stride + (ox << 1);
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
 	if (RGB == fb->rgbmode) {
@@ -208,13 +206,12 @@ fb_plot_pixel_4bpp(FB * fb, int x, int y, kx_ccomp red, kx_ccomp green, kx_ccomp
 	static int off, ox, oy;
 
 	fb_respect_angle(fb, x, y, &ox, &oy, NULL);
-	off = (oy * fb->real_width + ox) << 2; /* Bit offset */
-	oy = off >> 3; /* Target byte offset */
+	off = ox << 2; /* Bit offset */
 
-	offset = fb->backbuffer + oy;
+	offset = fb->backbuffer + oy * fb->stride + (off >> 3);
 	if (offset > (fb->backbuffer + fb->screensize)) return;
 
-	ox = 4 - off + (oy << 3); /* 8 - bpp - off % 8 = bits num for left shift */
+	ox = 4 - (off & 7); /* 8 - bpp - off % 8 = bits num for left shift */
 	*offset = (*offset & ~(0x0F << ox))
 			| ( ((11*red + (green << 4) + 5*blue) >> 8) << ox );
 }
@@ -228,13 +225,12 @@ fb_plot_pixel_2bpp(FB * fb, int x, int y, kx_ccomp red, kx_ccomp green, kx_ccomp
 	static int off, ox, oy;
 
 	fb_respect_angle(fb, x, y, &ox, &oy, NULL);
-	off = (oy * fb->real_width + ox) << 1; /* Bit offset */
-	oy = off >> 3; /* Target byte offset */
+	off = ox << 1; /* Bit offset */
 
-	offset = fb->backbuffer + oy;
+	offset = fb->backbuffer + oy * fb->stride + (off >> 3);
 	if (offset > (fb->backbuffer + fb->screensize)) return;
 
-	ox = 6 - off + (oy << 3); /* 8 - bpp - off % 8 = bits num for left shift */
+	ox = 6 - (off & 7); /* 8 - bpp - off % 8 = bits num for left shift */
 	*offset = (*offset & ~(3 << ox))
 			| ( ((11*red + (green << 4) + 5*blue) >> 11) << ox );
 }
@@ -248,17 +244,16 @@ fb_plot_pixel_1bpp(FB * fb, int x, int y, kx_ccomp red, kx_ccomp green, kx_ccomp
 	static int off, ox, oy;
 
 	fb_respect_angle(fb, x, y, &ox, &oy, NULL);
-	off = oy * fb->real_width + ox; /* Bit offset */
-	oy = off >> 3; /* Target byte offset */
+	off = ox; /* Bit offset */
 
-	offset = fb->backbuffer + oy;
+	offset = fb->backbuffer + oy * fb->stride + (off >> 3);
 	if (offset > (fb->backbuffer + fb->screensize)) return;
 
-	/* off - (obyte << 3) = off % 8;  8 - bpp - off % 8 = bits num for left shift */
+	ox = 7 - (off & 7); /* 8 - bpp - off % 8 = bits num for left shift */
 	if (((11*red + (green << 4) + 5*blue) >> 5) >= 128)
-		*offset = *offset | ( 1 << (7 - off + (oy << 3) ) );
+		*offset = *offset | ( 1 << ox );
 	else
-		*offset = *offset & (~( 1 << (7 - off + (oy << 3) ) ));
+		*offset = *offset & (~( 1 << ox ));
 }
 #endif
 
@@ -274,7 +269,7 @@ fb_draw_hline_32bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp gre
 	static uint32_t color;
 
 	fb_respect_angle(fb, x, y, &ox, &oy, &nx);
-	offset = fb->backbuffer + ((oy * fb->real_width + ox) << 2);
+	offset = fb->backbuffer + oy * fb->stride + (ox << 2);
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
 	if (RGB == fb->rgbmode) {
@@ -300,12 +295,11 @@ static void
 fb_draw_hline_24bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp green, kx_ccomp blue)
 {
 	static char *offset;
-	static int ox, oy, nx, r;
+	static int ox, oy, nx;
 	static kx_ccomp c1, c3;
 
 	fb_respect_angle(fb, x, y, &ox, &oy, &nx);
-	r = oy * fb->real_width + ox;
-	offset = fb->backbuffer + (r + (r << 1));
+	offset = fb->backbuffer + oy * fb->stride + (ox + (ox << 1));
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
 #ifdef __BIG_ENDIAN__
@@ -345,12 +339,11 @@ static void
 fb_draw_hline_18bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp green, kx_ccomp blue)
 {
 	static char *offset;
-	static int ox, oy, nx, r;
+	static int ox, oy, nx;
 	static kx_ccomp c1, c2, c3;
 
 	fb_respect_angle(fb, x, y, &ox, &oy, &nx);
-	r = oy * fb->real_width + ox;
-	offset = fb->backbuffer + (r + (r << 1));
+	offset = fb->backbuffer + oy * fb->stride + (ox + (ox << 1));
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
 #ifdef __BIG_ENDIAN__
@@ -398,7 +391,7 @@ fb_draw_hline_16bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp gre
 	static uint16_t color;
 
 	fb_respect_angle(fb, x, y, &ox, &oy, &nx);
-	offset = fb->backbuffer + ((oy * fb->real_width + ox) << 1);
+	offset = fb->backbuffer + oy * fb->stride + (ox << 1);
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
 	if (RGB == fb->rgbmode) {
@@ -429,10 +422,9 @@ fb_draw_hline_4bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp gree
 	static int cdata[2];
 
 	fb_respect_angle(fb, x, y, &ox, &oy, NULL);
-	off = (oy * fb->real_width + ox) << 2; /* Bit offset */
-	oy = off >> 3; /* Target byte offset */
+	off = ox << 2; /* Bit offset */
 
-	offset = fb->backbuffer + oy;
+	offset = fb->backbuffer + oy * fb->stride + (off >> 3);
 	if (offset > (fb->backbuffer + fb->screensize)) return;
 
 	if (length > fb->width - ox)
@@ -440,7 +432,7 @@ fb_draw_hline_4bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp gree
 	else
 		len = length;
 
-	ox = off + (oy << 3);
+	ox = off & 7;
 	mask = ~(0x0F << ox); /* 0 -> F0, 4 -> 0F */
 	ox = ox >> 2; /* ox = ox/4 -> [0..1] */
 	color = (11*red + (green << 4) + 5*blue) >> 8;
@@ -465,10 +457,9 @@ fb_draw_hline_2bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp gree
 	static int cdata[4], mask[4];
 
 	fb_respect_angle(fb, x, y, &ox, &oy, NULL);
-	off = (oy * fb->real_width + ox) << 1; /* Bit offset */
-	oy = off >> 3; /* Target byte offset */
+	off = ox << 1; /* Bit offset */
 
-	offset = fb->backbuffer + oy;
+	offset = fb->backbuffer + oy * fb->stride + (off >> 3);
 	if (offset > (fb->backbuffer + fb->screensize)) return;
 
 	if (length > fb->width - ox)
@@ -476,7 +467,7 @@ fb_draw_hline_2bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp gree
 	else
 		len = length;
 
-	ox = off + (oy << 3);
+	ox = off & 7;
 	ox = ox >> 1; /* ox = ox/2 -> [0..3] */
 	color = (11*red + (green << 4) + 5*blue) >> 11;
 	cdata[0] = color << 6;
@@ -506,10 +497,9 @@ fb_draw_hline_1bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp gree
 	static int off, ox, oy, len, color;
 
 	fb_respect_angle(fb, x, y, &ox, &oy, NULL);
-	off = oy * fb->real_width + ox; /* Bit offset */
-	oy = off >> 3; /* Target byte offset */
+	off = ox; /* Bit offset */
 
-	offset = fb->backbuffer + oy;
+	offset = fb->backbuffer + oy * fb->stride + (off >> 3);
 	if (offset > (fb->backbuffer + fb->screensize)) return;
 
 	if (length > fb->width - ox)
@@ -517,7 +507,7 @@ fb_draw_hline_1bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp gree
 	else
 		len = length;
 
-	ox = off + (oy << 3); /* [0-7] */
+	ox = off & 7;
 	color = 1 << (7 - ox);
 	if ( ((11*red + (green << 4) + 5*blue) >> 5) >= 128 )
 		for(; len > 0; len--) {
