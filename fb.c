@@ -278,9 +278,9 @@ fb_draw_hline_32bpp(FB *fb, int x, int y, int length, kx_ccomp red, kx_ccomp gre
 	if (offset > (fb->backbuffer + fb->screensize - fb->byte_pp)) return;
 
 	if (RGB == fb->rgbmode) {
-		color = (uint32_t)blue << 16 | (uint32_t)green << 8 | (uint32_t)red;
-	} else {
 		color = (uint32_t)red << 16 | (uint32_t)green << 8 | (uint32_t)blue;
+	} else {
+		color = (uint32_t)blue << 16 | (uint32_t)green << 8 | (uint32_t)red;
 	}
 
 	if (length > fb->width - x)
